@@ -46,6 +46,13 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 	int windowX, windowY;
 
 	// Apply window size settings if the appropriate option is enabled
+	#ifdef __XBOX_BUILD
+	int drawableWidthX, drawableHeightX;
+	SDL_Window* currentWindowX  = SDL_GL_GetCurrentWindow();
+	SDL_GL_GetDrawableSize(currentWindowX, &drawableWidthX, &drawableHeightX);
+	emu.setOutputSize(drawableWidthX, drawableHeightX);
+	glViewport(0, 0, drawableWidthX, drawableHeightX);
+	#else
 	if (config.windowSettings.rememberPosition) {
 		windowX = config.windowSettings.x;
 		windowY = config.windowSettings.y;
@@ -58,6 +65,7 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 		windowHeight = 480;
 	}
 	emu.setOutputSize(windowWidth, windowHeight);
+	#endif
 
 	#ifdef __XBOX_BUILD
 	if (needOpenGL) {
