@@ -66,11 +66,28 @@ option(ENABLE_RENDERDOC_API "Build with support for Renderdoc's capture API for 
 option(DISABLE_SSE4 "Build with SSE4 instructions disabled, may reduce performance" OFF)
 option(USE_LIBRETRO_AUDIO "Enable to use the LR audio device with the LR core. Otherwise our own device is used" OFF)
 option(IOS_SIMULATOR_BUILD "Compiling for IOS simulator (Set to off if compiling for a real iPhone)" ON)
+option(XBOX_BUILD "Building for Xbox" OFF)
 
 # Discord RPC & LuaJIT are currently not supported on iOS
 if(IOS)
     set(ENABLE_DISCORD_RPC OFF)
     set(ENABLE_LUAJIT OFF)
+endif()
+
+if(XBOX_BUILD)
+    set(ENABLE_OPENGL ON)
+    set(ENABLE_VULKAN OFF)
+    set(ENABLE_METAL OFF)
+    set(ENABLE_WAYLAND OFF)
+    set(ENABLE_HTTP_SERVER OFF)
+    set(ENABLE_DISCORD_RPC OFF)
+    set(ENABLE_LUAJIT ON)
+    set(ENABLE_QT_GUI OFF)
+    set(USE_SYSTEM_SDL2 ON)
+    set(ENABLE_GIT_VERSIONING OFF)
+    set(ENABLE_RENDERDOC_API ON)
+    set(DISABLE_SSE4 OF)
+    set(USE_LIBRETRO_AUDIO OFF)
 endif()
 
 set(OPENGL_PROFILE ${DEFAULT_OPENGL_PROFILE} CACHE STRING "OpenGL profile to use if OpenGL is enabled. Valid values are 'OpenGL' and 'OpenGLES'.")
@@ -159,6 +176,9 @@ include_directories(third_party/mio/single_include)
 add_compile_definitions(NOMINMAX)             # Make windows.h not define min/max macros because third-party deps don't like it
 add_compile_definitions(WIN32_LEAN_AND_MEAN)  # Make windows.h not include literally everything
 add_compile_definitions(SDL_MAIN_HANDLED)
+if(XBOX_BUILD)
+    add_compile_definitions(__XBOX_BUILD)
+endif()
 
 if(ENABLE_WAYLAND)
     add_compile_definitions(WAYLAND_ENABLED)
@@ -717,7 +737,11 @@ else()
 endif()
 
 if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
-    add_executable(Alber)
+    if(XBOX_BUILD)
+        add_library(Alber SHARED)
+    else()
+        add_executable(Alber)
+    endif()
 
     if(ENABLE_QT_GUI)
         find_package(Qt6 REQUIRED COMPONENTS Widgets LinguistTools)

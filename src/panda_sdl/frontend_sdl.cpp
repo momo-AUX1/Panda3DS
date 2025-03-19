@@ -7,6 +7,7 @@
 #include "version.hpp"
 
 FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMappings()) {
+	#ifndef __XBOX_BUILD
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0) {
 		Helpers::panic("Failed to initialize SDL2");
 	}
@@ -16,6 +17,7 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 	if (SDL_Init(SDL_INIT_GAMECONTROLLER) < 0) {
 		Helpers::warn("Failed to initialize SDL2 GameController: %s", SDL_GetError());
 	}
+	#endif
 
 	if (SDL_WasInit(SDL_INIT_GAMECONTROLLER)) {
 		gameController = SDL_GameControllerOpen(0);
@@ -57,6 +59,33 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 	}
 	emu.setOutputSize(windowWidth, windowHeight);
 
+	#ifdef __XBOX_BUILD
+	if (needOpenGL) {
+		// Use the existing SDL window and OpenGL context provided by the host application.
+		window = SDL_GL_GetCurrentWindow();
+		if (window == nullptr) {
+			Helpers::panic("No current SDL window found");
+		}
+		glContext = SDL_GL_GetCurrentContext();
+		if (glContext == nullptr) {
+			Helpers::panic("No current OpenGL context found");
+		}
+	
+		// Initialize GLAD based on the renderer type.
+		if (config.rendererType == RendererType::OpenGL) {
+			if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress))) {
+				Helpers::panic("OpenGL init failed");
+			}
+		} else {
+			if (!gladLoadGLES2Loader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress))) {
+				Helpers::panic("OpenGL ES init failed");
+			}
+			emu.getRenderer()->setupGLES();
+		}
+	
+		SDL_GL_SetSwapInterval(config.vsyncEnabled ? 1 : 0);
+	}
+	#else
 	if (needOpenGL) {
 		// Demand 4.1 core for OpenGL renderer (max available on MacOS), 3.3 for the software & null renderers
 		// MacOS gets mad if we don't explicitly demand a core profile
@@ -96,6 +125,7 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 
 		SDL_GL_SetSwapInterval(config.vsyncEnabled ? 1 : 0);
 	}
+	#endif
 
 #ifdef PANDA3DS_ENABLE_VULKAN
 	if (config.rendererType == RendererType::Vulkan) {
