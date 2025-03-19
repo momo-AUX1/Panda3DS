@@ -48,7 +48,7 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 	// Apply window size settings if the appropriate option is enabled
 	#ifdef __XBOX_BUILD
 	int drawableWidthX, drawableHeightX;
-	SDL_Window* currentWindowX  = SDL_GL_GetCurrentWindow();
+	SDL_Window* currentWindowX = SDL_GL_GetCurrentWindow();
 	SDL_GL_GetDrawableSize(currentWindowX, &drawableWidthX, &drawableHeightX);
 	windowX = SDL_WINDOWPOS_CENTERED;
 	windowY = SDL_WINDOWPOS_CENTERED;
@@ -184,12 +184,16 @@ void FrontendSDL::run() {
 				case SDL_QUIT: {
 					printf("Bye :(\n");
 					programRunning = false;
-
+					#ifdef __XBOX_BUILD
+					// We don't need to save window position on Xbox
+					return;
+					#else
 					// Remember window position & size for future runs
 					auto& windowSettings = emu.getConfig().windowSettings;
 					SDL_GetWindowPosition(window, &windowSettings.x, &windowSettings.y);
 					SDL_GetWindowSize(window, &windowSettings.width, &windowSettings.height);
 					return;
+					#endif
 				}
 
 				case SDL_KEYDOWN: {
