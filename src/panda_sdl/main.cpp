@@ -18,6 +18,25 @@
 #include <stdexcept>
 #include "panda_sdl/frontend_sdl.hpp"
 
+int my_dupenv_s(char** buffer, size_t* numberOfElements, const char* varname)
+{
+    const char* val = getenv(varname);
+    if (!val) {
+        if (buffer) *buffer = nullptr;
+        if (numberOfElements) *numberOfElements = 0;
+        return 1; 
+    }
+    size_t len = strlen(val) + 1;
+    if (numberOfElements) *numberOfElements = len;
+    *buffer = (char*)malloc(len);
+    if (!*buffer)
+        return 1; 
+    memcpy(*buffer, val, len);
+    return 0;
+}
+#define _dupenv_s my_dupenv_s
+
+
 namespace GameLoader {
     struct InstalledGame {
         std::string title;
@@ -135,7 +154,7 @@ static int ImGuiGameSelector(const std::vector<GameLoader::InstalledGame>& games
         ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize;
         ImGui::Begin("Select Game", nullptr, flags);
         for (int i = 0; i < static_cast<int>(games.size()); i++) {
-            std::string label = std::to_string(i) + ": " + games[i].title + " (ID: " + games[i].id + " PATH: " + std::string(games[i].path) + ")";   
+            std::string label = std::to_string(i) + ": " + games[i].title + " (ID: " + games[i].id + " PATH: " + games[i].path.string() + ")";   
             if (ImGui::Selectable(label.c_str(), selected == i))
                 selected = i;
         }
