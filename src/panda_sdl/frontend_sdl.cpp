@@ -50,6 +50,8 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 	int drawableWidthX, drawableHeightX;
 	SDL_Window* currentWindowX  = SDL_GL_GetCurrentWindow();
 	SDL_GL_GetDrawableSize(currentWindowX, &drawableWidthX, &drawableHeightX);
+	windowX = SDL_WINDOWPOS_CENTERED;
+	windowY = SDL_WINDOWPOS_CENTERED;
 	emu.setOutputSize(drawableWidthX, drawableHeightX);
 	glViewport(0, 0, drawableWidthX, drawableHeightX);
 	#else
