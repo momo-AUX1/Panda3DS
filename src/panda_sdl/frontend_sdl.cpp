@@ -175,9 +175,15 @@ void FrontendSDL::run() {
 
 		emu.runFrame();
 		HIDService& hid = emu.getServiceManager().getHID();
+		SDL_Window* currentWindowXX  = SDL_GL_GetCurrentWindow();
 
 		SDL_Event event;
 		while (SDL_PollEvent(&event)) {
+			#ifdef __XBOX_BUILD
+			int drawableWidthXX, drawableHeightXX;
+			SDL_GL_GetDrawableSize(currentWindowXX, &drawableWidthXX, &drawableHeightXX);
+			glViewport(0, 0, drawableWidthXX, drawableHeightXX);
+			#endif
 			namespace Keys = HID::Keys;
 
 			switch (event.type) {
