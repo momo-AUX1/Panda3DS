@@ -120,6 +120,9 @@ static int ImGuiGameSelector(const std::vector<GameLoader::InstalledGame>& games
     int selected = 0;
     bool selectionMade = false;
     while (!selectionMade) {
+        int drawableWidth, drawableHeight;
+        SDL_GL_GetDrawableSize(currentWindow, &drawableWidth, &drawableHeight);
+        glViewport(0, 0, drawableWidth, drawableHeight);
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             ImGui_ImplSDL2_ProcessEvent(&event);
@@ -161,9 +164,6 @@ static int ImGuiGameSelector(const std::vector<GameLoader::InstalledGame>& games
         ImGui::End();
         ImGui::Render();
         SDL_GL_MakeCurrent(currentWindow, currentContext);
-        int drawableWidth, drawableHeight;
-        SDL_GL_GetDrawableSize(currentWindow, &drawableWidth, &drawableHeight);
-        glViewport(0, 0, drawableWidth, drawableHeight);
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -187,6 +187,9 @@ static void ShowAlertWithOK(const std::string& message) {
     ImGui_ImplOpenGL3_Init("#version 410");
     bool done = false;
     while (!done) {
+        int drawableWidth, drawableHeight;
+        SDL_GL_GetDrawableSize(currentWindow, &drawableWidth, &drawableHeight);
+        glViewport(0, 0, drawableWidth, drawableHeight);
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             ImGui_ImplSDL2_ProcessEvent(&event);
@@ -211,9 +214,6 @@ static void ShowAlertWithOK(const std::string& message) {
         ImGui::End();
         ImGui::Render();
         SDL_GL_MakeCurrent(currentWindow, currentContext);
-        int drawableWidth, drawableHeight;
-        SDL_GL_GetDrawableSize(currentWindow, &drawableWidth, &drawableHeight);
-        glViewport(0, 0, drawableWidth, drawableHeight);
         glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
