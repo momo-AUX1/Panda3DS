@@ -179,7 +179,7 @@ add_compile_definitions(WIN32_LEAN_AND_MEAN)  # Make windows.h not include liter
 add_compile_definitions(SDL_MAIN_HANDLED)
 if(XBOX_BUILD)
     add_compile_definitions(__XBOX_BUILD)
-    target_link_libraries(Alber PRIVATE Imm32)
+    target_link_libraries(AlberCore PRIVATE Imm32)
 endif()
 
 if(ENABLE_WAYLAND)
