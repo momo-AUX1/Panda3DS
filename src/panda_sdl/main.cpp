@@ -282,6 +282,7 @@ extern "C" EXPORT int external_main(SDL_Window* host_window, SDL_GLContext host_
             throw std::runtime_error("Failed to initialize GLAD");
         }
         printf("external_main: GL context is now current\n");
+        SDL_setenv("SDL_AUDIODRIVER", "wasapi", 1);
 
         std::filesystem::path file = "";
         std::filesystem::path localStatePath = "";
