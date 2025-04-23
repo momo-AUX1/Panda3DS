@@ -177,10 +177,10 @@ static int ImGuiGameSelector(const std::vector<GameLoader::InstalledGame>& games
             ImGui::SetCursorPosX((800 - 120) * 0.5f);
             if (ImGui::Button("Settings", ImVec2(120, 0))) {
 				inSettings = true;
-		
+				selectionMade = false;
 				SDL_Event clearEvent;
-				while (SDL_PollEvent(&clearEvent)) {
-				}
+				while (SDL_PollEvent(&clearEvent)) {}
+				ImGui::SetNextWindowFocus();
 			}
 
             ImGui::End();
