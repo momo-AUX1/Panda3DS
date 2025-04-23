@@ -147,6 +147,35 @@ void EmulatorConfig::load() {
 			frontendSettings.language = toml::find_or<std::string>(ui, "Language", "en");
 		}
 	}
+
+#if defined(__DEVSTORE_BUILD)
+	if (data.contains("DevStore")) {
+		auto devStoreResult = toml::expect<toml::value>(data.at("DevStore"));
+		if (devStoreResult.is_ok()) {
+			auto devStore = devStoreResult.unwrap();
+			devStoreSettings.secretKey = toml::find_or<std::string>(devStore, "SecretKey", "");
+			devStoreSettings.enableCloudSaves = toml::find_or<toml::boolean>(devStore, "EnableCloudSaves", false);
+		}
+	}
+#endif
+
+	#ifdef __XBOX_BUILD
+	auto xbs = toml::expect<toml::value>(data.at("xbox_specific")).unwrap();
+	if(xbs.contains("debugInfo"))
+		xboxSpecific.debugInfo = toml::find<bool>(xbs, "debugInfo");
+	if(xbs.contains("stretchWindow"))
+		xboxSpecific.stretchWindow = toml::find<bool>(xbs, "stretchWindow");
+	{
+		auto s = toml::find_or<std::string>(xbs, "glBackend", "DesktopGL");
+		xboxSpecific.glBackend = (s=="OpenGLES") ? XboxSettings::GLBackend::OpenGLES : XboxSettings::GLBackend::DesktopGL;
+	}
+	{
+		auto s = toml::find_or<std::string>(xbs, "audioBackend", "SDL");
+		if      (s=="WASAPI") xboxSpecific.audioBackend = XboxSettings::AudioBackend::WASAPI;
+		else if (s=="OSS")    xboxSpecific.audioBackend = XboxSettings::AudioBackend::OSS;
+		else                  xboxSpecific.audioBackend = XboxSettings::AudioBackend::SDL;
+	}
+	#endif
 }
 
 void EmulatorConfig::save() {
@@ -208,6 +237,24 @@ void EmulatorConfig::save() {
 	data["UI"]["Theme"] = std::string(FrontendSettings::themeToString(frontendSettings.theme));
 	data["UI"]["WindowIcon"] = std::string(FrontendSettings::iconToString(frontendSettings.icon));
 	data["UI"]["Language"] = frontendSettings.language;
+
+#ifdef __DEVSTORE_BUILD
+	data["DevStore"]["SecretKey"] = devStoreSettings.secretKey;
+	data["DevStore"]["EnableCloudSaves"] = devStoreSettings.enableCloudSaves;
+#endif
+
+	#ifdef __XBOX_BUILD
+	toml::value xbs;
+	xbs["debugInfo"]     = xboxSpecific.debugInfo;
+	xbs["stretchWindow"] = xboxSpecific.stretchWindow;
+	xbs["glBackend"]     = xboxSpecific.glBackend == XboxSettings::GLBackend::OpenGLES ? "OpenGLES" : "DesktopGL";
+	switch (xboxSpecific.audioBackend) {
+	  case XboxSettings::AudioBackend::WASAPI: xbs["audioBackend"]="WASAPI"; break;
+	  case XboxSettings::AudioBackend::OSS:    xbs["audioBackend"]="OSS";    break;
+	  default:                                 xbs["audioBackend"]="SDL";    break;
+	}
+	data["xbox_specific"] = xbs;
+	#endif
 
 	std::ofstream file(path, std::ios::out);
 	file << data;

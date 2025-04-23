@@ -117,6 +117,28 @@ struct EmulatorConfig {
 	AudioDeviceConfig audioDeviceConfig;
 	FrontendSettings frontendSettings;
 
+	#ifdef __XBOX_BUILD
+    struct XboxSettings {
+        // Toggle on-screen debug overlay
+        bool debugInfo        = false;
+		bool stretchWindow    = false;
+
+        // Which GL backend to use
+        enum class GLBackend { DesktopGL = 0, OpenGLES } glBackend = GLBackend::DesktopGL;
+        // Audio backend selection
+        enum class AudioBackend { SDL = 0, WASAPI, OSS } audioBackend = AudioBackend::SDL;
+    };
+    XboxSettings xboxSpecific;
+
+	#if defined(__DEVSTORE_BUILD)
+    struct DevStoreSettings {
+        std::string secretKey;
+        bool enableCloudSaves = false;
+    } devStoreSettings;
+	#endif
+	
+	#endif
+
 	EmulatorConfig(const std::filesystem::path& path);
 	void load();
 	void save();

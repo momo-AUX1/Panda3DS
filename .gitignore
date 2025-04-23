@@ -16,6 +16,7 @@ ReleaseWithClangCL/
 Enabled/
 Disabled/
 build/
+build-angle/
 
 .vs/
 .vscode/*.log

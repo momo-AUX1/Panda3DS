@@ -6,8 +6,15 @@
 #include "sdl_sensors.hpp"
 #include "version.hpp"
 
+#ifdef __XBOX_BUILD
+#include "imgui.h"
+#include "imgui_impl_sdl.h"
+#include "imgui_impl_opengl3.h"
+#include <SDL.h>
+#endif
+
 FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMappings()) {
-	#ifndef __XBOX_BUILD
+#ifndef __XBOX_BUILD
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0) {
 		Helpers::panic("Failed to initialize SDL2");
 	}
@@ -17,7 +24,7 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 	if (SDL_Init(SDL_INIT_GAMECONTROLLER) < 0) {
 		Helpers::warn("Failed to initialize SDL2 GameController: %s", SDL_GetError());
 	}
-	#endif
+#endif
 
 	if (SDL_WasInit(SDL_INIT_GAMECONTROLLER)) {
 		gameController = SDL_GameControllerOpen(0);
@@ -31,6 +38,10 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 	}
 
 	const EmulatorConfig& config = emu.getConfig();
+#ifdef __XBOX_BUILD
+	const bool debugInfo = config.xboxSpecific.debugInfo;
+	const bool stretchWindow = config.xboxSpecific.stretchWindow;
+#endif
 	// We need OpenGL for software rendering/null renderer or for the OpenGL renderer if it's enabled.
 	bool needOpenGL = config.rendererType == RendererType::Software || config.rendererType == RendererType::Null;
 #ifdef PANDA3DS_ENABLE_OPENGL
@@ -45,16 +56,29 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 	// Positions of the window
 	int windowX, windowY;
 
-	// Apply window size settings if the appropriate option is enabled
-	#ifdef __XBOX_BUILD
-	int drawableWidthX, drawableHeightX;
-	SDL_Window* currentWindowX = SDL_GL_GetCurrentWindow();
-	SDL_GL_GetDrawableSize(currentWindowX, &drawableWidthX, &drawableHeightX);
-	windowX = SDL_WINDOWPOS_CENTERED;
-	windowY = SDL_WINDOWPOS_CENTERED;
-	emu.setOutputSize(drawableWidthX, drawableHeightX);
-	glViewport(0, 0, drawableWidthX, drawableHeightX);
-	#else
+#ifdef __XBOX_BUILD
+	if (stretchWindow) {
+		int drawableWidthX, drawableHeightX;
+		SDL_Window* currentWindowX = SDL_GL_GetCurrentWindow();
+		SDL_GL_GetDrawableSize(currentWindowX, &drawableWidthX, &drawableHeightX);
+		windowX = SDL_WINDOWPOS_CENTERED;
+		windowY = SDL_WINDOWPOS_CENTERED;
+		emu.setOutputSize(drawableWidthX, drawableHeightX);
+		glViewport(0, 0, drawableWidthX, drawableHeightX);
+	} else {
+		if (config.windowSettings.rememberPosition) {
+			windowX = config.windowSettings.x;
+			windowY = config.windowSettings.y;
+			windowWidth = config.windowSettings.width;
+			windowHeight = config.windowSettings.height;
+		} else {
+			windowX = SDL_WINDOWPOS_CENTERED;
+			windowY = SDL_WINDOWPOS_CENTERED;
+			windowWidth = 400;
+			windowHeight = 480;
+		}
+	}
+#else
 	if (config.windowSettings.rememberPosition) {
 		windowX = config.windowSettings.x;
 		windowY = config.windowSettings.y;
@@ -67,11 +91,10 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 		windowHeight = 480;
 	}
 	emu.setOutputSize(windowWidth, windowHeight);
-	#endif
+#endif
 
-	#ifdef __XBOX_BUILD
+#ifdef __XBOX_BUILD
 	if (needOpenGL) {
-		// Use the existing SDL window and OpenGL context provided by the host application.
 		window = SDL_GL_GetCurrentWindow();
 		if (window == nullptr) {
 			Helpers::panic("No current SDL window found");
@@ -80,8 +103,12 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 		if (glContext == nullptr) {
 			Helpers::panic("No current OpenGL context found");
 		}
-	
-		// Initialize GLAD based on the renderer type.
+		#ifdef __XBOX_ONE_BUILD
+		if (!gladLoadGLES2Loader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress))) {
+			Helpers::panic("OpenGL ES init failed");
+		}
+		emu.getRenderer()->setupGLES();
+		#else
 		if (config.rendererType == RendererType::OpenGL) {
 			if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress))) {
 				Helpers::panic("OpenGL init failed");
@@ -92,10 +119,10 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 			}
 			emu.getRenderer()->setupGLES();
 		}
-	
+		#endif
 		SDL_GL_SetSwapInterval(config.vsyncEnabled ? 1 : 0);
 	}
-	#else
+#else
 	if (needOpenGL) {
 		// Demand 4.1 core for OpenGL renderer (max available on MacOS), 3.3 for the software & null renderers
 		// MacOS gets mad if we don't explicitly demand a core profile
@@ -135,7 +162,7 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 
 		SDL_GL_SetSwapInterval(config.vsyncEnabled ? 1 : 0);
 	}
-	#endif
+#endif
 
 #ifdef PANDA3DS_ENABLE_VULKAN
 	if (config.rendererType == RendererType::Vulkan) {
@@ -157,6 +184,18 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 	}
 #endif
 
+#ifdef __XBOX_BUILD
+    if (config.xboxSpecific.debugInfo) {
+        ImGui::CreateContext();
+        ImGui_ImplSDL2_InitForOpenGL(window, glContext);
+    #ifdef __XBOX_ONE_BUILD
+        ImGui_ImplOpenGL3_Init("#version 300 es");
+    #else
+        ImGui_ImplOpenGL3_Init("#version 410");
+    #endif
+    }
+#endif
+
 	emu.initGraphicsContext(window);
 }
 
@@ -167,39 +206,62 @@ void FrontendSDL::run() {
 	keyboardAnalogX = false;
 	keyboardAnalogY = false;
 	holdingRightClick = false;
+	#ifdef __XBOX_BUILD
+    const bool debugInfo = emu.getConfig().xboxSpecific.debugInfo;
+	#endif
 
 	while (programRunning) {
+		SDL_GL_MakeCurrent(window, glContext);
+
+		// Query the full window size
+		int fullW, fullH;
+		SDL_GL_GetDrawableSize(window, &fullW, &fullH);
+
+		glViewport(0, 0, fullW, fullH);
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+#ifdef __XBOX_BUILD
+		const auto& cfg = emu.getConfig();
+		if (cfg.xboxSpecific.stretchWindow) {
+			emu.setOutputSize(fullW, fullH);
+			glViewport(0, 0, fullW, fullH);
+		} else {
+			constexpr int baseW = 400, baseH = 480;
+			float scale = std::min(fullW / float(baseW), fullH / float(baseH));
+			int outW = int(baseW * scale), outH = int(baseH * scale);
+			int offX = (fullW - outW) / 2, offY = (fullH - outH) / 2;
+			emu.setOutputSize(outW, outH);
+			glViewport(offX, offY, outW, outH);
+		}
+#endif
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 		httpServer.processActions();
 #endif
 
 		emu.runFrame();
 		HIDService& hid = emu.getServiceManager().getHID();
-		SDL_Window* currentWindowXX  = SDL_GL_GetCurrentWindow();
+		SDL_Window* currentWindowXX = SDL_GL_GetCurrentWindow();
 
 		SDL_Event event;
 		while (SDL_PollEvent(&event)) {
-			#ifdef __XBOX_BUILD
+#ifdef __XBOX_BUILD
 			int drawableWidthXX, drawableHeightXX;
 			SDL_GL_GetDrawableSize(currentWindowXX, &drawableWidthXX, &drawableHeightXX);
 			glViewport(0, 0, drawableWidthXX, drawableHeightXX);
-			#endif
+#endif
+
 			namespace Keys = HID::Keys;
 
 			switch (event.type) {
 				case SDL_QUIT: {
 					printf("Bye :(\n");
 					programRunning = false;
-					#ifdef __XBOX_BUILD
-					// We don't need to save window position on Xbox
-					return;
-					#else
 					// Remember window position & size for future runs
 					auto& windowSettings = emu.getConfig().windowSettings;
 					SDL_GetWindowPosition(window, &windowSettings.x, &windowSettings.y);
 					SDL_GetWindowSize(window, &windowSettings.width, &windowSettings.height);
 					return;
-					#endif
 				}
 
 				case SDL_KEYDOWN: {
@@ -448,6 +510,53 @@ void FrontendSDL::run() {
 				}
 			}
 		}
+
+
+		#ifdef __XBOX_BUILD
+		if (debugInfo) {
+			ImGui_ImplOpenGL3_NewFrame();
+			ImGui_ImplSDL2_NewFrame(window);
+			ImGui::NewFrame();
+			ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
+			ImGui::SetNextWindowBgAlpha(0.35f); 
+
+			ImGuiWindowFlags flags = 
+				  ImGuiWindowFlags_NoTitleBar 
+				| ImGuiWindowFlags_NoResize 
+				| ImGuiWindowFlags_AlwaysAutoResize
+				| ImGuiWindowFlags_NoMove
+				| ImGuiWindowFlags_NoNav
+				| ImGuiWindowFlags_NoSavedSettings;
+
+			ImGui::Begin("##DebugOverlay", nullptr, flags);
+
+			// — GL version & type —
+			int major = 0, minor = 0;
+			glGetIntegerv(GL_MAJOR_VERSION, &major);
+			glGetIntegerv(GL_MINOR_VERSION, &minor);
+			bool isGLES = strstr((const char*)glGetString(GL_VERSION), "OpenGL ES") != nullptr;
+			ImGui::Text("Context: %s %d.%d", isGLES ? "GLES" : "GL", major, minor);
+
+			// — GPU driver/renderer string —
+			ImGui::Text("Driver: %s", glGetString(GL_RENDERER));
+
+			// — FPS (ImGui IO) —
+			ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
+
+			// — Platform name —
+			ImGui::Text("Platform: %s", SDL_GetPlatform());
+
+			// — Current resolution —
+			int currentWidth, currentHeight;
+			SDL_GetWindowSize(window, &currentWidth, &currentHeight);
+			ImGui::Text("Resolution: %dx%d", currentWidth, currentHeight);
+
+			ImGui::End();
+			ImGui::Render();
+			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+		}
+#endif
+
 
 		// Update controller analog sticks and HID service
 		if (emu.romType != ROMType::None) {

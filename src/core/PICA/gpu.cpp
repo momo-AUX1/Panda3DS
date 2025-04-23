@@ -63,6 +63,7 @@ GPU::GPU(Memory& mem, EmulatorConfig& config) : mem(mem), config(config) {
 		}
 #endif
 		default: {
+			throw std::runtime_error("Rendering backend not supported: " + std::string(Renderer::typeToString(config.rendererType)));
 			Helpers::panic("Rendering backend not supported: %s", Renderer::typeToString(config.rendererType));
 			break;
 		}
