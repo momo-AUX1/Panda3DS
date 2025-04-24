@@ -500,12 +500,13 @@ extern "C" EXPORT int external_main(SDL_Window* host_window, SDL_GLContext host_
 		if (!gladLoadGLES2Loader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress))) {
 			Helpers::panic("OpenGL ES init failed");
 		}
+		printf("external_main: GLES context is now current\n");
 		#else
 		if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress))) {
 			throw std::runtime_error("Failed to initialize GLAD");
 		}
-		#endif
 		printf("external_main: GL context is now current\n");
+		#endif
 
 		std::filesystem::path file = "";
 		std::filesystem::path localStatePath = "";
