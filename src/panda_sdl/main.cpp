@@ -219,7 +219,7 @@ static int ImGuiGameSelector(const std::vector<GameLoader::InstalledGame>& games
 
 			// --- GPU ---
 			if (ImGui::CollapsingHeader("GPU")) {
-                const char* renderers[] = {"", "OpenGL", "Vulkan", "Metal"};
+                const char* renderers[] = {"", "OpenGL", "Vulkan", "Metal", "Software", "Null"};
                 int rend = (int)cfg.rendererType;
                 if (rend < 0 || rend >= (IM_ARRAYSIZE(renderers))) rend = 1; 
                 if (ImGui::Combo("Renderer", &rend, renderers, IM_ARRAYSIZE(renderers))) {
