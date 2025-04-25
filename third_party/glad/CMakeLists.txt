@@ -2,7 +2,7 @@ set(GLAD_FILES src/gl.c include/KHR/khrplatform.h)
 
 if(WIN32)
     set(GLAD_FILES ${GLAD_FILES} src/glad_wgl.c)
-elseif(ANDROID)
+elseif(ANDROID OR XBOX_ONE_BUILD)
     set(GLAD_FILES ${GLAD_FILES} src/glad_egl.c)
 elseif(NOT APPLE)
     set(GLAD_FILES ${GLAD_FILES} src/glad_egl.c src/glad_glx.c)

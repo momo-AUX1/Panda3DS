@@ -19,6 +19,7 @@ build/
 build-angle/
 
 .vs/
+.vscode/
 .vscode/*.log
 .cache/
 ipch/

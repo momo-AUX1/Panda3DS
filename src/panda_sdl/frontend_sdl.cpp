@@ -185,15 +185,16 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 #endif
 
 #ifdef __XBOX_BUILD
-    if (config.xboxSpecific.debugInfo) {
         ImGui::CreateContext();
+		ImGuiIO& io = ImGui::GetIO();
+	   	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+	    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
         ImGui_ImplSDL2_InitForOpenGL(window, glContext);
     #ifdef __XBOX_ONE_BUILD
         ImGui_ImplOpenGL3_Init("#version 300 es");
     #else
         ImGui_ImplOpenGL3_Init("#version 410");
     #endif
-    }
 #endif
 
 	emu.initGraphicsContext(window);
@@ -208,6 +209,9 @@ void FrontendSDL::run() {
 	holdingRightClick = false;
 	#ifdef __XBOX_BUILD
     const bool debugInfo = emu.getConfig().xboxSpecific.debugInfo;
+	bool overlayOpen = false;
+    bool startHeld = false;
+    bool selectHeld = false;
 	#endif
 
 	while (programRunning) {
@@ -246,6 +250,7 @@ void FrontendSDL::run() {
 		SDL_Event event;
 		while (SDL_PollEvent(&event)) {
 #ifdef __XBOX_BUILD
+			ImGui_ImplSDL2_ProcessEvent(&event);
 			int drawableWidthXX, drawableHeightXX;
 			SDL_GL_GetDrawableSize(currentWindowXX, &drawableWidthXX, &drawableHeightXX);
 			glViewport(0, 0, drawableWidthXX, drawableHeightXX);
@@ -393,11 +398,9 @@ void FrontendSDL::run() {
 					}
 					break;
 
-				case SDL_CONTROLLERBUTTONUP:
 				case SDL_CONTROLLERBUTTONDOWN: {
 					if (emu.romType == ROMType::None) break;
 					u32 key = 0;
-
 					switch (event.cbutton.button) {
 						case SDL_CONTROLLER_BUTTON_A: key = Keys::B; break;
 						case SDL_CONTROLLER_BUTTON_B: key = Keys::A; break;
@@ -412,14 +415,54 @@ void FrontendSDL::run() {
 						case SDL_CONTROLLER_BUTTON_BACK: key = Keys::Select; break;
 						case SDL_CONTROLLER_BUTTON_START: key = Keys::Start; break;
 					}
-
 					if (key != 0) {
 						if (event.cbutton.state == SDL_PRESSED) {
 							hid.pressKey(key);
-						} else {
+						}
+					}
+					#ifdef __XBOX_BUILD
+                    if (event.cbutton.button == SDL_CONTROLLER_BUTTON_START && event.cbutton.state == SDL_PRESSED) {
+                        startHeld = true;
+                    }
+                    if (event.cbutton.button == SDL_CONTROLLER_BUTTON_BACK && event.cbutton.state == SDL_PRESSED) {
+                        selectHeld = true;
+                    }
+                    if (startHeld && selectHeld) {
+                        overlayOpen = !overlayOpen;
+                    }
+					#endif
+					break;
+				}
+				case SDL_CONTROLLERBUTTONUP: {
+					if (emu.romType == ROMType::None) break;
+					u32 key = 0;
+					switch (event.cbutton.button) {
+						case SDL_CONTROLLER_BUTTON_A: key = Keys::B; break;
+						case SDL_CONTROLLER_BUTTON_B: key = Keys::A; break;
+						case SDL_CONTROLLER_BUTTON_X: key = Keys::Y; break;
+						case SDL_CONTROLLER_BUTTON_Y: key = Keys::X; break;
+						case SDL_CONTROLLER_BUTTON_LEFTSHOULDER: key = Keys::L; break;
+						case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER: key = Keys::R; break;
+						case SDL_CONTROLLER_BUTTON_DPAD_LEFT: key = Keys::Left; break;
+						case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: key = Keys::Right; break;
+						case SDL_CONTROLLER_BUTTON_DPAD_UP: key = Keys::Up; break;
+						case SDL_CONTROLLER_BUTTON_DPAD_DOWN: key = Keys::Down; break;
+						case SDL_CONTROLLER_BUTTON_BACK: key = Keys::Select; break;
+						case SDL_CONTROLLER_BUTTON_START: key = Keys::Start; break;
+					}
+					if (key != 0) {
+						if (event.cbutton.state == SDL_RELEASED) {
 							hid.releaseKey(key);
 						}
 					}
+					#ifdef __XBOX_BUILD
+                    if (event.cbutton.button == SDL_CONTROLLER_BUTTON_START && event.cbutton.state == SDL_RELEASED) {
+                        startHeld = false;
+                    }
+                    if (event.cbutton.button == SDL_CONTROLLER_BUTTON_BACK && event.cbutton.state == SDL_RELEASED) {
+                        selectHeld = false;
+                    }
+					#endif
 					break;
 				}
 
@@ -513,49 +556,75 @@ void FrontendSDL::run() {
 
 
 		#ifdef __XBOX_BUILD
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplSDL2_NewFrame(window);
+		ImGui::NewFrame();
+	
 		if (debugInfo) {
-			ImGui_ImplOpenGL3_NewFrame();
-			ImGui_ImplSDL2_NewFrame(window);
-			ImGui::NewFrame();
 			ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
-			ImGui::SetNextWindowBgAlpha(0.35f); 
-
-			ImGuiWindowFlags flags = 
-				  ImGuiWindowFlags_NoTitleBar 
-				| ImGuiWindowFlags_NoResize 
+			ImGui::SetNextWindowBgAlpha(0.35f);
+	
+			ImGuiWindowFlags flags =
+				  ImGuiWindowFlags_NoTitleBar
+				| ImGuiWindowFlags_NoResize
 				| ImGuiWindowFlags_AlwaysAutoResize
 				| ImGuiWindowFlags_NoMove
 				| ImGuiWindowFlags_NoNav
 				| ImGuiWindowFlags_NoSavedSettings;
-
+	
 			ImGui::Begin("##DebugOverlay", nullptr, flags);
-
-			// — GL version & type —
+	
 			int major = 0, minor = 0;
 			glGetIntegerv(GL_MAJOR_VERSION, &major);
 			glGetIntegerv(GL_MINOR_VERSION, &minor);
-			bool isGLES = strstr((const char*)glGetString(GL_VERSION), "OpenGL ES") != nullptr;
-			ImGui::Text("Context: %s %d.%d", isGLES ? "GLES" : "GL", major, minor);
-
-			// — GPU driver/renderer string —
-			ImGui::Text("Driver: %s", glGetString(GL_RENDERER));
-
-			// — FPS (ImGui IO) —
-			ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
-
-			// — Platform name —
+			const bool isGLES =
+				strstr(reinterpret_cast<const char*>(glGetString(GL_VERSION)),
+					   "OpenGL ES") != nullptr;
+	
+			ImGui::Text("Context : %s %d.%d", isGLES ? "GLES" : "GL", major, minor);
+			ImGui::Text("Driver  : %s", glGetString(GL_RENDERER));
+			ImGui::Text("FPS     : %.1f", ImGui::GetIO().Framerate);
 			ImGui::Text("Platform: %s", SDL_GetPlatform());
-
-			// — Current resolution —
-			int currentWidth, currentHeight;
-			SDL_GetWindowSize(window, &currentWidth, &currentHeight);
-			ImGui::Text("Resolution: %dx%d", currentWidth, currentHeight);
-
+	
+			int curW, curH;
+			SDL_GetWindowSize(window, &curW, &curH);
+			ImGui::Text("Resolution: %dx%d", curW, curH);
+	
 			ImGui::End();
-			ImGui::Render();
-			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 		}
-#endif
+	
+		if (overlayOpen) {
+			int winW, winH;
+			SDL_GL_GetDrawableSize(window, &winW, &winH);
+	
+			ImGui::SetNextWindowSize(ImVec2(200, 100), ImGuiCond_Always);
+			ImGui::SetNextWindowPos(ImVec2(winW * 0.5f, winH * 0.5f),
+									 ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+	
+			ImGui::Begin("##QuitOverlay", nullptr,
+						 ImGuiWindowFlags_NoTitleBar     |
+						 ImGuiWindowFlags_NoResize);
+	
+			char verLabel[32];
+			snprintf(verLabel, sizeof(verLabel), "Panda3DS v%s", PANDA3DS_VERSION);
+			ImVec2 txt = ImGui::CalcTextSize(verLabel);
+			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - txt.x) * 0.5f);
+			ImGui::TextUnformatted(verLabel);
+			ImGui::Dummy(ImVec2(0, 8));
+	
+			if (ImGui::Button("Quit to Main Menu", ImVec2(-1, 0))) {
+				programRunning = false;
+				overlayOpen = false;
+			}
+			if (ImGui::Button("Go Back", ImVec2(-1, 0))) {
+				overlayOpen = false;
+			}
+			ImGui::End();
+		}
+	
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+	#endif
 
 
 		// Update controller analog sticks and HID service

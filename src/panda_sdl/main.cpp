@@ -7,6 +7,9 @@
 
 #include <SDL.h>
 #include <glad/gl.h>
+#ifdef __XBOX_ONE_BUILD
+#include <glad/glad_egl.h>
+#endif
 #include <imgui.h>
 
 #include <cstdio>
@@ -497,6 +500,12 @@ extern "C" EXPORT int external_main(SDL_Window* host_window, SDL_GLContext host_
 			return -1;
 		}
 		#ifdef __XBOX_ONE_BUILD
+		// Load EGL entry points before initializing GLES
+		if (!gladLoadEGLLoader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress))) {
+			printf("external_main: Failed to load EGL: %s\n", SDL_GetError());
+			return -1;
+		}
+		printf("external_main: EGL context is now current\n");
 		if (!gladLoadGLES2Loader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress))) {
 			Helpers::panic("OpenGL ES init failed");
 		}
@@ -541,25 +550,34 @@ extern "C" EXPORT int external_main(SDL_Window* host_window, SDL_GLContext host_
 			file = result;
 		}
 
-		std::vector<GameLoader::InstalledGame> allGames = scanAllGames();
-		while (allGames.empty()) {
-			ShowAlertWithOK(
-				"No ROM inserted!\n\nPlease add ROMs (supported formats: .cci, .3ds, .cxi, .app, .ncch, .elf, .axf, .3dsx) to one of the following "
-				"folders:\nE:/\nE:/PANDA3DS\n[LOCAL_STATE_PATH]\n[LOCAL_STATE_PATH]/PANDA3DS"
-			);
-			allGames = scanAllGames();
-		}
+		while (true) {
+            // Scan for ROMs
+            auto allGames = scanAllGames();
+            while (allGames.empty()) {
+                ShowAlertWithOK(
+                    "No ROM inserted!\n\n"
+                    "Please add ROMs (supported formats: .cci, .3ds, .cxi, .app, .ncch, .elf, .axf, .3dsx) to one of the following folders:\n"
+                    "E:/\n"
+                    "E:/PANDA3DS\n"
+                    "[LOCAL_STATE_PATH]\n"
+                    "[LOCAL_STATE_PATH]/PANDA3DS"
+                );
+                allGames = scanAllGames();
+            }
 
-		int selectedIndex = ImGuiGameSelector(allGames);
-		std::filesystem::path selectedGamePath = allGames[selectedIndex].path;
+            // Let user pick
+            int selectedIndex = ImGuiGameSelector(allGames);
+            auto selectedGamePath = allGames[selectedIndex].path;
 
-		FrontendSDL app;
-		if (!app.loadROM(selectedGamePath)) {
-			printf("Failed to load ROM file: %s\n", selectedGamePath.string().c_str());
-			return -1;
-		}
-		app.run();
-		return 0;
+            // Load & run
+            FrontendSDL app;
+            if (!app.loadROM(selectedGamePath)) {
+                printf("Failed to load ROM file: %s\n", selectedGamePath.string().c_str());
+                return -1;
+            }
+            app.run();
+            // When app.run() returns (user quit), loop back to selector
+        }
 	} catch (const std::exception& e) {
 		fprintf(stderr, "Exception caught in external_main: %s\n", e.what());
 		ShowCriticalAlertAndFreeze(std::string("Exception: ") + e.what());
