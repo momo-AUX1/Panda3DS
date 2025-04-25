@@ -436,6 +436,7 @@ void FrontendSDL::run() {
                     }
                     if (startHeld && selectHeld) {
                         overlayOpen = !overlayOpen;
+                        emu.togglePause();
                     }
 					#endif
 					break;

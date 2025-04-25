@@ -175,6 +175,7 @@ static void BlockingUpdateUI(SDL_Window* win, const std::function<std::string()>
 		finalMsg = result + "\n\nPress Enter / A to continue.";
 
 	bool wait = true;
+	Uint32 startTime = SDL_GetTicks();
 	while (wait) {
 		SDL_Event e;
 		while (SDL_PollEvent(&e)) {
@@ -186,6 +187,10 @@ static void BlockingUpdateUI(SDL_Window* win, const std::function<std::string()>
 		}
 		renderPanel(finalMsg.c_str());
 		SDL_Delay(16);
+
+		if (success && SDL_GetTicks() - startTime >= 5000) {
+			wait = false;
+		}
 	}
 
 	ImGui_ImplOpenGL3_Shutdown();
