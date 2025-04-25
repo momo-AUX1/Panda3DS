@@ -421,15 +421,23 @@ void FrontendSDL::run() {
 						}
 					}
 					#ifdef __XBOX_BUILD
-					if (event.cbutton.button == SDL_CONTROLLER_BUTTON_START) {
-						startHeld = true;
-					}
-					if (event.cbutton.button == SDL_CONTROLLER_BUTTON_BACK) {
-						selectHeld = true;
-					}
-					if (startHeld && selectHeld && !overlayOpen) {
-						overlayOpen = true;
-					}
+                    ImGuiIO& io = ImGui::GetIO();
+                    if (!io.WantCaptureGamepad) {
+                        if (event.cbutton.button == SDL_CONTROLLER_BUTTON_START) {
+                            startHeld = true;
+                            if (selectHeld) {
+                                overlayOpen = true;
+                                startHeld = selectHeld = false;
+                            }
+                        }
+                        else if (event.cbutton.button == SDL_CONTROLLER_BUTTON_BACK) {
+                            selectHeld = true;
+                            if (startHeld) {
+                                overlayOpen = true;
+                                startHeld = selectHeld = false;
+                            }
+                        }
+                    }
 					#endif
 					break;
 				}
@@ -456,11 +464,14 @@ void FrontendSDL::run() {
 						}
 					}
 					#ifdef __XBOX_BUILD
-                    if (event.cbutton.button == SDL_CONTROLLER_BUTTON_START && event.cbutton.state == SDL_RELEASED) {
-                        startHeld = false;
-                    }
-                    if (event.cbutton.button == SDL_CONTROLLER_BUTTON_BACK && event.cbutton.state == SDL_RELEASED) {
-                        selectHeld = false;
+                    ImGuiIO& io = ImGui::GetIO();
+                    if (!io.WantCaptureGamepad) {
+                        if (event.cbutton.button == SDL_CONTROLLER_BUTTON_START) {
+                            startHeld = false;
+                        }
+                        else if (event.cbutton.button == SDL_CONTROLLER_BUTTON_BACK) {
+                            selectHeld = false;
+                        }
                     }
 					#endif
 					break;
