@@ -421,15 +421,15 @@ void FrontendSDL::run() {
 						}
 					}
 					#ifdef __XBOX_BUILD
-                    if (event.cbutton.button == SDL_CONTROLLER_BUTTON_START && event.cbutton.state == SDL_PRESSED) {
-                        startHeld = true;
-                    }
-                    if (event.cbutton.button == SDL_CONTROLLER_BUTTON_BACK && event.cbutton.state == SDL_PRESSED) {
-                        selectHeld = true;
-                    }
-                    if (startHeld && selectHeld) {
-                        overlayOpen = !overlayOpen;
-                    }
+					if (event.cbutton.button == SDL_CONTROLLER_BUTTON_START) {
+						startHeld = true;
+					}
+					if (event.cbutton.button == SDL_CONTROLLER_BUTTON_BACK) {
+						selectHeld = true;
+					}
+					if (startHeld && selectHeld && !overlayOpen) {
+						overlayOpen = true;
+					}
 					#endif
 					break;
 				}
