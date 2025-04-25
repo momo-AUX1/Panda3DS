@@ -188,7 +188,7 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
         ImGui::CreateContext();
 		ImGuiIO& io = ImGui::GetIO();
 	   	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
-	    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+		io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableGamepad;
         ImGui_ImplSDL2_InitForOpenGL(window, glContext);
     #ifdef __XBOX_ONE_BUILD
         ImGui_ImplOpenGL3_Init("#version 300 es");
@@ -421,22 +421,15 @@ void FrontendSDL::run() {
 						}
 					}
 					#ifdef __XBOX_BUILD
-					if (!debugInfo) {
-						if (event.cbutton.button == SDL_CONTROLLER_BUTTON_START) {
-							startHeld = true;
-							if (selectHeld) {
-								overlayOpen = true;
-								startHeld = selectHeld = false;
-							}
-						}
-						else if (event.cbutton.button == SDL_CONTROLLER_BUTTON_BACK) {
-							selectHeld = true;
-							if (startHeld) {
-								overlayOpen = true;
-								startHeld = selectHeld = false;
-							}
-						}
-					}
+                    if (event.cbutton.button == SDL_CONTROLLER_BUTTON_START && event.cbutton.state == SDL_PRESSED) {
+                        startHeld = true;
+                    }
+                    if (event.cbutton.button == SDL_CONTROLLER_BUTTON_BACK && event.cbutton.state == SDL_PRESSED) {
+                        selectHeld = true;
+                    }
+                    if (startHeld && selectHeld) {
+                        overlayOpen = !overlayOpen;
+                    }
 					#endif
 					break;
 				}
@@ -463,14 +456,12 @@ void FrontendSDL::run() {
 						}
 					}
 					#ifdef __XBOX_BUILD
-					if (!debugInfo) {
-						if (event.cbutton.button == SDL_CONTROLLER_BUTTON_START) {
-							startHeld = false;
-						}
-						else if (event.cbutton.button == SDL_CONTROLLER_BUTTON_BACK) {
-							selectHeld = false;
-						}
-					}
+                    if (event.cbutton.button == SDL_CONTROLLER_BUTTON_START && event.cbutton.state == SDL_RELEASED) {
+                        startHeld = false;
+                    }
+                    if (event.cbutton.button == SDL_CONTROLLER_BUTTON_BACK && event.cbutton.state == SDL_RELEASED) {
+                        selectHeld = false;
+                    }
 					#endif
 					break;
 				}
