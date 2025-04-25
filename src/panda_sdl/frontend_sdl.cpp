@@ -187,8 +187,7 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 #ifdef __XBOX_BUILD
         ImGui::CreateContext();
 		ImGuiIO& io = ImGui::GetIO();
-	   	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
-		io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableGamepad;
+	    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
         ImGui_ImplSDL2_InitForOpenGL(window, glContext);
     #ifdef __XBOX_ONE_BUILD
         ImGui_ImplOpenGL3_Init("#version 300 es");
@@ -215,6 +214,14 @@ void FrontendSDL::run() {
 	#endif
 
 	while (programRunning) {
+#ifdef __XBOX_BUILD
+	    ImGuiIO& io = ImGui::GetIO();
+	    if (overlayOpen) {
+	        io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+	    } else {
+	        io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableGamepad;
+	    }
+#endif
 		SDL_GL_MakeCurrent(window, glContext);
 
 		// Query the full window size
