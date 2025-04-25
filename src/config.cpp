@@ -155,6 +155,7 @@ void EmulatorConfig::load() {
 			auto devStore = devStoreResult.unwrap();
 			devStoreSettings.secretKey = toml::find_or<std::string>(devStore, "SecretKey", "");
 			devStoreSettings.enableCloudSaves = toml::find_or<toml::boolean>(devStore, "EnableCloudSaves", false);
+			devStoreSettings.checkForUpdates = toml::find_or<toml::boolean>(devStore, "CheckForUpdates", true);
 		}
 	}
 #endif
@@ -241,6 +242,7 @@ void EmulatorConfig::save() {
 #ifdef __DEVSTORE_BUILD
 	data["DevStore"]["SecretKey"] = devStoreSettings.secretKey;
 	data["DevStore"]["EnableCloudSaves"] = devStoreSettings.enableCloudSaves;
+	data["DevStore"]["CheckForUpdates"] = devStoreSettings.checkForUpdates;
 #endif
 
 	#ifdef __XBOX_BUILD

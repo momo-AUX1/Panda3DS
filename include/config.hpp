@@ -134,6 +134,7 @@ struct EmulatorConfig {
     struct DevStoreSettings {
         std::string secretKey;
         bool enableCloudSaves = false;
+		bool checkForUpdates = true;
     } devStoreSettings;
 	#endif
 	
