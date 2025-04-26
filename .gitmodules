@@ -86,3 +86,6 @@
 	path = third_party/SDL2
 	url = https://github.com/libsdl-org/SDL
 	branch = SDL2
+[submodule "third_party/OpenGL-Registry"]
+	path = third_party/OpenGL-Registry
+	url = https://github.com/KhronosGroup/OpenGL-Registry.git
