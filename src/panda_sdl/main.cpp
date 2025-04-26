@@ -32,6 +32,18 @@
 #include <functional>
 #endif
 
+float GetScaleFactor() {
+    int drawableW, drawableH;
+    SDL_GL_GetDrawableSize(SDL_GL_GetCurrentWindow(), &drawableW, &drawableH);
+    constexpr float baseWidth = 1920.0f;
+    constexpr float baseHeight = 1080.0f;
+    float scaleW = drawableW / baseWidth;
+    float scaleH = drawableH / baseHeight;
+    return std::min(scaleW, scaleH);
+}
+
+float scale = GetScaleFactor();
+
 #if defined(__DEVSTORE_BUILD)
 static void* s_devStoreLib = nullptr;
 static constexpr int APP_VERSION = 1;
@@ -150,7 +162,7 @@ static void BlockingUpdateUI(SDL_Window* win, const std::function<std::string()>
 		int w, h;
 		SDL_GetWindowSize(win, &w, &h);
 		ImGui::SetNextWindowPos({w * 0.5f, h * 0.5f}, ImGuiCond_Always, {0.5f, 0.5f});
-		ImGui::SetNextWindowSize({420, 120}, ImGuiCond_Always);
+		ImGui::SetNextWindowSize({420 * scale, 120 * scale}, ImGuiCond_Always);
 		ImGui::Begin("Updater", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
 		ImGui::TextWrapped("%s", text);
 		ImGui::End();
@@ -163,7 +175,7 @@ static void BlockingUpdateUI(SDL_Window* win, const std::function<std::string()>
 		SDL_GL_SwapWindow(win);
 	};
 
-	renderPanel("Updating… please wait");
+	renderPanel("Updating, please wait...");
 
 	std::string result = doDownload();
 
@@ -390,7 +402,7 @@ static int ImGuiGameSelector(const std::vector<GameLoader::InstalledGame>& games
 		if (!inSettings) {
 			// ─── Game selector ───────────────────────────────────────────────────────
 			ImGui::SetNextWindowPos(ImVec2(drawableW * 0.5f, drawableH * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-			ImGui::SetNextWindowSize(ImVec2(800, 600), ImGuiCond_Always);
+			ImGui::SetNextWindowSize(ImVec2(800 * scale, 600 * scale), ImGuiCond_Always);
 			ImGui::Begin("Select Game", nullptr, flags);
 
 			for (int i = 0; i < (int)games.size(); i++) {
@@ -403,7 +415,8 @@ static int ImGuiGameSelector(const std::vector<GameLoader::InstalledGame>& games
 			ImGui::Dummy(ImVec2(0, 8));
 			ImGui::Separator();
 			ImGui::Dummy(ImVec2(0, 8));
-			ImGui::SetCursorPosX((800 - 120) * 0.5f);
+			float windowW = ImGui::GetWindowWidth();
+			ImGui::SetCursorPosX((windowW - 120) * 0.5f);
 			if (ImGui::Button("Settings", ImVec2(120, 0))) {
 				inSettings = true;
 				selectionMade = false;
@@ -416,9 +429,12 @@ static int ImGuiGameSelector(const std::vector<GameLoader::InstalledGame>& games
 			ImGui::End();
 		} else {
 			// ─── Settings page ────────────────────────────────────────────────────────
+			int w, h;
+			SDL_GetWindowSize(currentWindow, &w, &h);
 			ImGui::SetNextWindowPos(ImVec2(drawableW * 0.5f, drawableH * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-			ImGui::SetNextWindowSize(ImVec2(500, 600), ImGuiCond_Always);
+			ImGui::SetNextWindowSize(ImVec2(w * 0.5f, h * 0.75f), ImGuiCond_Always);
 			ImGui::Begin("Settings", nullptr, flags);
+			ImGui::BeginChild("SettingsChild", ImVec2(0, - (30.0f + 8.0f * scale)), true, ImGuiWindowFlags_AlwaysUseWindowPadding);
 
 			// --- General ---
 			if (ImGui::CollapsingHeader("General", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -594,8 +610,10 @@ static int ImGuiGameSelector(const std::vector<GameLoader::InstalledGame>& games
 #endif
 
 			ImGui::Separator();
+			ImGui::EndChild();
 			ImGui::Dummy(ImVec2(0, 8));
-			ImGui::SetCursorPosX((500 - 80) * 0.5f);
+			float winW_back = ImGui::GetWindowWidth();
+			ImGui::SetCursorPosX((winW_back - 80) * 0.5f);
 			if (ImGui::Button("Back", ImVec2(80, 0))) {
 				cfg.save();
 				inSettings = false;
@@ -662,7 +680,7 @@ static void ShowAlertWithOK(const std::string& message) {
 		int w, h;
 		SDL_GetWindowSize(currentWindow, &w, &h);
 		ImGui::SetNextWindowPos(ImVec2(w * 0.5f, h * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-		ImGui::SetNextWindowSize(ImVec2(500, 300), ImGuiCond_Always);
+		ImGui::SetNextWindowSize(ImVec2(500 * scale, 300 * scale), ImGuiCond_Always);
 		ImGui::Begin("Alert", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
 		ImGui::TextWrapped("%s", message.c_str());
 		ImGui::Text("Press Enter or A to retry.");
@@ -712,7 +730,7 @@ static void ShowCriticalAlertAndFreeze(const std::string& message) {
 		int w, h;
 		SDL_GetWindowSize(currentWindow, &w, &h);
 		ImGui::SetNextWindowPos(ImVec2(w * 0.5f, h * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-		ImGui::SetNextWindowSize(ImVec2(500, 300), ImGuiCond_Always);
+		ImGui::SetNextWindowSize(ImVec2(500 * scale, 300 * scale), ImGuiCond_Always);
 		ImGui::Begin("Critical Error", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
 		ImGui::TextWrapped("%s", message.c_str());
 		ImGui::Text("Application will now freeze.");
